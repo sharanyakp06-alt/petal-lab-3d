@@ -1,23 +1,25 @@
 # Maybelline favorites in 3D (unofficial fan project)
 
-A scroll-driven 3D showcase of four popular Maybelline products: Sky High mascara, SuperStay Matte Ink, Fit Me Matte + Poreless foundation and Instant Age Rewind concealer.
+A scroll-driven 3D product showcase of four popular makeup products, built with JavaScript and Three.js.
 
-This is a student concept project. It is not affiliated with or endorsed by Maybelline. The 3D shapes are simple stand-ins, not copies of the real packaging. The page uses no official logos, photos or slogans.
+**Live demo:** https://sharanyakp06-alt.github.io/maybelline-showcase/
 
-## Run it
-Open the folder in VS Code, install **Live Server**, right-click `index.html` and choose **Open with Live Server**.
+![Intro](screenshots/intro.png)
+![Product](screenshots/product.png)
 
-## Edit it
-Change the `PRODUCTS` list at the top of the script in `index.html`: names, descriptions, shades and pastel colors.
-Shades marked "placeholder" are generic. Replace them with official shade names.
+## Features
+- Scroll through the products. Each one fades in on a soft pastel background.
+- Drag any product to turn it around.
+- Tap a shade swatch to recolor the 3D product.
+- Responsive layout for desktop and phone.
 
-## Push to GitHub
-```bash
-git init
-git add .
-git commit -m "Maybelline 3D showcase"
-git branch -M main
-git remote add origin https://github.com/<your-username>/<repo-name>.git
-git push -u origin main
-```
-Then: repo **Settings → Pages → Deploy from branch → main / root**.
+## Built with
+HTML, CSS, JavaScript, Three.js (3D graphics), deployed on GitHub Pages.
+
+## How it works
+- The products are simple 3D shapes made in Three.js: cylinders, spheres and lathe-style parts.
+- Soft studio lighting gives the metal, glass and gloss realistic reflections.
+- Scroll position controls which product fades in, and the background colors blend between sections.
+
+## Disclaimer
+This is a student concept project. It is not affiliated with or endorsed by Maybelline. Product names belong to their owners. The 3D shapes are generic stand-ins, not copies of real packaging, and the project uses no official logos or photos.
