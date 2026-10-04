@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Maybelline favorites in 3D (unofficial fan showcase)</title>
+<title>Petal Lab: 3D makeup showcase</title>
 <link href="https://fonts.googleapis.com/css2?family=Gloock&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
 <style>
   :root { --ink:#3a2530; --paper:#fffaf5; --tape:rgba(255,226,170,.8); --a:#fbd5dc; --b:#fde9e1; }
@@ -46,8 +46,8 @@
 </style>
 </head>
 <body>
+<header><div><strong>Petal Lab in 3D</strong><small>Concept project with fictional brand and product names.</small></div><span>Drag the product to turn it</span></header>
 <div id="bg"></div>
-<header><div><strong>Maybelline in 3D</strong><small>Unofficial fan project. Not affiliated with or endorsed by Maybelline. Names belong to their owners.</small></div><span>Drag the product to turn it</span></header>
 <canvas id="c"></canvas>
 <main id="products"></main>
 
@@ -57,28 +57,34 @@
 /* bg1 and bg2 are the two pastel colors of the background for that section. */
 /* The shade names marked "placeholder" are generic. Replace them with the official ones you want to show. */
 const PRODUCTS = [
-  { type:'lineup', brand:'Unofficial fan showcase', name:'Meet the Maybelline best sellers',
+  { type:'lineup', brand:'Concept showcase', name:'Meet the featured ',
     note:'Scroll to explore each product in 3D. Drag to turn it around.',
     bg1:'#fbd9e3', bg2:'#e9dcf7' },
 
-  { type:'mascara', brand:'Maybelline New York', name:'Lash Sensational Sky High',
-     note:'A flexible brush that reaches even the smallest lashes, for long, lifted lashes.',
-    shades:[{n:'Very Black',c:'#1b1417'},{n:'Blue Mist',c:'#3f5f99'},{n:'Burgundy Haze',c:'#5c1730'}] },
+  { type:'mascara', brand:'Petal Lab', name:'Lift and Lengthen Mascara',
+    note:'A flexible brush that reaches every lash for a long, lifted look.',
+    bg1:'#dcd9f5', bg2:'#f7e1ec',
+    shades:[{n:'Black',c:'#1b1417'},{n:'Midnight blue',c:'#3f5f99'},{n:'Burgundy',c:'#5c1730'}] },
 
-  { type:'liquidLip', brand:'Maybelline New York', name:'SuperStay Matte Ink',
-    note:'A liquid lipstick with a flat matte finish and richly saturated color.',
+  { type:'liquidLip', brand:'Petal Lab', name:'Velvet Matte Liquid Lip',
+    note:'A liquid lipstick with a smooth matte finish and rich color.',
     bg1:'#fbd5dc', bg2:'#fde9e1',
-    shades:[{n:'Rosy pink (placeholder)',c:'#c4506f'},{n:'Classic red (placeholder)',c:'#b3243b'},{n:'Berry (placeholder)',c:'#7a1f4a'},{n:'Soft nude (placeholder)',c:'#c9857a'}] },
+    shades:[{n:'Rose',c:'#c4506f'},{n:'Classic red',c:'#b3243b'},{n:'Berry',c:'#7a1f4a'},{n:'Soft nude',c:'#c9857a'}] },
 
-  { type:'foundation', brand:'Maybelline New York', name:'Fit Me Matte + Poreless Foundation',
-    note:'A liquid foundation for a matte, natural-looking finish, a popular pick for oily skin.',
+  { type:'foundation', brand:'Petal Lab', name:'Soft Matte Foundation',
+    note:'A liquid foundation for a natural, matte-looking finish.',
     bg1:'#fde0c6', bg2:'#fff1de',
-    shades:[{n:'105 Fair Ivory',c:'#f1d6c0'},{n:'120 Classic Ivory',c:'#ebc9ac'},{n:'130 Buff Beige',c:'#e0b48f'},{n:'220 Natural Beige',c:'#d3a07a'}] },
+    shades:[{n:'Fair',c:'#f1d6c0'},{n:'Light',c:'#ebc9ac'},{n:'Medium',c:'#e0b48f'},{n:'Warm tan',c:'#d3a07a'}] },
 
-  { type:'concealer', brand:'Maybelline New York', name:'Instant Age Rewind Eraser Concealer',
-    note:'A sponge-tip concealer made to brighten under-eyes and cover dark circles.',
+  { type:'concealer', brand:'Petal Lab', name:'Bright Eyes Concealer',
+    note:'A sponge-tip concealer to brighten under-eyes and cover dark circles.',
     bg1:'#d4ebdf', bg2:'#e7f2f6',
-    shades:[{n:'Fair (placeholder)',c:'#f0d2bb'},{n:'Light (placeholder)',c:'#e6bd9c'},{n:'Medium (placeholder)',c:'#d2a07a'},{n:'Tan (placeholder)',c:'#b98258'}] }
+    shades:[{n:'Fair',c:'#f0d2bb'},{n:'Light',c:'#e6bd9c'},{n:'Medium',c:'#d2a07a'},{n:'Tan',c:'#b98258'}] },
+
+  { type:'blush', brand:'Petal Lab', name:'Cheek Bloom Blush',
+    note:'A soft pressed blush that blends into a natural flush.',
+    bg1:'#fde2d6', bg2:'#f9e3ee',
+    shades:[{n:'Peach',c:'#f2a58e'},{n:'Rose',c:'#e07a8f'},{n:'Berry',c:'#b0486e'},{n:'Coral',c:'#ee7f6b'}] }
 ];
 
 /* ---------- 2. PAGE CONTENT ---------- */
@@ -172,12 +178,14 @@ const BUILD = {
     return { group:g, tint:sponge };
   },
   lineup() {                            // the four products side by side for the intro
-    const g = new THREE.Group();
-    const items = [[BUILD.mascara('#1b1417'), 2.9], [BUILD.liquidLip('#b3243b'), 2.7], [BUILD.foundation('#e0b48f'), 2.4], [BUILD.concealer('#e6bd9c'), 2.6]];
-    items.forEach(([it, h], k) => { const w = fit(it.group, h); w.position.x = (k - 1.5) * 1.1; g.add(w); });
-    return { group:g, tint:new THREE.MeshBasicMaterial() };
-  }
-};
+      blush(hex) {                          // round compact with the powder showing
+    const tint = tintMat(hex, { roughness:0.9 }), g = new THREE.Group();
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.05, 24, 96), gold()); rim.rotation.x = Math.PI / 2; rim.position.y = 0.2;
+    g.add(cyl(1.05, 1.05, 0.35, gold(), 0), cyl(0.85, 0.85, 0.08, tint, 0.2), rim);
+    g.rotation.x = 1.1;
+    return { group:g, tint };
+  
+  };
 
 /* Soft contact shadow under each product. */
 function shadowTexture() {
