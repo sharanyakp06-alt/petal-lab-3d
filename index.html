@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maybelline favorites in 3D (unofficial fan showcase)</title>
+<link href="https://fonts.googleapis.com/css2?family=Gloock&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#3a2530; --paper:#fffaf5; --tape:rgba(255,226,170,.8); --a:#fbd5dc; --b:#fde9e1; }
+  * { box-sizing:border-box; margin:0; }
+  html { scroll-snap-type:y proximity; }
+  body { font-family:'Figtree',system-ui,sans-serif; color:var(--ink); }
+
+  /* Soft pastel background: a gradient that changes per product, plus blurred light patches */
+  #bg { position:fixed; inset:0; z-index:-1; background:linear-gradient(160deg, var(--a), var(--b)); }
+  #bg::before, #bg::after { content:''; position:absolute; border-radius:50%; filter:blur(70px); }
+  #bg::before { width:55vmax; height:55vmax; left:-15vmax; top:-18vmax; background:rgba(255,255,255,.55); }
+  #bg::after  { width:45vmax; height:45vmax; right:-12vmax; bottom:-20vmax; background:rgba(255,255,255,.4); }
+
+  canvas { position:fixed; inset:0; width:100%; height:100%; z-index:0; touch-action:pan-y; cursor:grab; }
+  canvas:active { cursor:grabbing; }
+  header { position:fixed; top:0; left:0; right:0; z-index:3; display:flex; justify-content:space-between; align-items:flex-start;
+           padding:18px 6vw; pointer-events:none; }
+  header small { display:block; font-size:.72rem; opacity:.6; margin-top:2px; max-width:42ch; }
+  header strong { font-family:'Gloock',serif; font-weight:400; font-size:1.5rem; }
+  header span { font-size:.9rem; opacity:.65; }
+
+  section { position:relative; z-index:1; min-height:100vh; display:flex; align-items:center; padding:0 6vw; pointer-events:none; scroll-snap-align:start; }
+  .card { pointer-events:auto; position:relative; width:min(420px,100%); background:var(--paper); padding:30px 28px 26px;
+          box-shadow:0 16px 30px -16px rgba(80,40,55,.35), 0 1px 0 rgba(80,40,55,.06); transform:rotate(-1deg); }
+  section:nth-of-type(even) .card { transform:rotate(1deg); }
+  .card::before { content:''; position:absolute; top:-14px; left:50%; width:110px; height:28px; background:var(--tape); transform:translateX(-50%) rotate(-3deg); }
+  .sticker { position:absolute; right:-14px; top:-18px; width:64px; height:64px; border-radius:50%; background:#f08aa0; color:#fff; text-align:center; line-height:1.1;
+             display:grid; place-items:center; font-family:'Gloock',serif; font-size:.72rem; transform:rotate(12deg); }
+  .brand { font-size:1rem; opacity:.7; }
+  h2 { font-family:'Gloock',serif; font-weight:400; font-size:clamp(2rem,4.5vw,3.1rem); line-height:1.05; margin:.2rem 0 .8rem; }
+  .note { line-height:1.5; max-width:34ch; }
+  .shade-line { margin:1.2rem 0 .6rem; font-weight:600; }
+  .swatches { display:flex; gap:10px; }
+  .swatch { width:36px; height:36px; border-radius:50%; border:3px solid var(--paper); box-shadow:0 0 0 1px rgba(58,37,48,.25); cursor:pointer; }
+  .swatch[aria-pressed="true"] { box-shadow:0 0 0 2px var(--ink); }
+  .swatch:focus-visible { outline:3px solid #3a6df0; outline-offset:3px; }
+  .price { display:inline-block; margin-top:1.3rem; padding:5px 14px; background:var(--ink); color:var(--paper); border-radius:999px; font-weight:600; }
+  @media (max-width:760px) { section { align-items:flex-end; padding-bottom:5vh; } .card { padding:24px 22px 20px; } .note { max-width:none; } header span { display:none; } }
+  @media (prefers-reduced-motion:reduce) { html { scroll-snap-type:none; } }
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<header><div><strong>Maybelline in 3D</strong><small>Unofficial fan project. Not affiliated with or endorsed by Maybelline. Names belong to their owners.</small></div><span>Drag the product to turn it</span></header>
+<canvas id="c"></canvas>
+<main id="products"></main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ---------- 1. YOUR PRODUCTS: edit this list ---------- */
+/* bg1 and bg2 are the two pastel colors of the background for that section. */
+/* The shade names marked "placeholder" are generic. Replace them with the official ones you want to show. */
+const PRODUCTS = [
+  { type:'lineup', brand:'Unofficial fan showcase', name:'Meet the Maybelline best sellers',
+    note:'Scroll to explore each product in 3D. Drag to turn it around.',
+    bg1:'#fbd9e3', bg2:'#e9dcf7' },
+
+  { type:'mascara', brand:'Maybelline New York', name:'Lash Sensational Sky High',
+     note:'A flexible brush that reaches even the smallest lashes, for long, lifted lashes.',
+    shades:[{n:'Very Black',c:'#1b1417'},{n:'Blue Mist',c:'#3f5f99'},{n:'Burgundy Haze',c:'#5c1730'}] },
+
+  { type:'liquidLip', brand:'Maybelline New York', name:'SuperStay Matte Ink',
+    note:'A liquid lipstick with a flat matte finish and richly saturated color.',
+    bg1:'#fbd5dc', bg2:'#fde9e1',
+    shades:[{n:'Rosy pink (placeholder)',c:'#c4506f'},{n:'Classic red (placeholder)',c:'#b3243b'},{n:'Berry (placeholder)',c:'#7a1f4a'},{n:'Soft nude (placeholder)',c:'#c9857a'}] },
+
+  { type:'foundation', brand:'Maybelline New York', name:'Fit Me Matte + Poreless Foundation',
+    note:'A liquid foundation for a matte, natural-looking finish, a popular pick for oily skin.',
+    bg1:'#fde0c6', bg2:'#fff1de',
+    shades:[{n:'105 Fair Ivory',c:'#f1d6c0'},{n:'120 Classic Ivory',c:'#ebc9ac'},{n:'130 Buff Beige',c:'#e0b48f'},{n:'220 Natural Beige',c:'#d3a07a'}] },
+
+  { type:'concealer', brand:'Maybelline New York', name:'Instant Age Rewind Eraser Concealer',
+    note:'A sponge-tip concealer made to brighten under-eyes and cover dark circles.',
+    bg1:'#d4ebdf', bg2:'#e7f2f6',
+    shades:[{n:'Fair (placeholder)',c:'#f0d2bb'},{n:'Light (placeholder)',c:'#e6bd9c'},{n:'Medium (placeholder)',c:'#d2a07a'},{n:'Tan (placeholder)',c:'#b98258'}] }
+];
+
+/* ---------- 2. PAGE CONTENT ---------- */
+const N = PRODUCTS.length;
+document.getElementById('products').innerHTML = PRODUCTS.map((p, i) => `
+  <section aria-label="${p.name}">
+    <article class="card">
+      ${p.shades ? '<div class="sticker">best seller</div>' : ''}
+      <p class="brand">${p.brand}</p>
+      <h2>${p.name}</h2>
+      <p class="note">${p.note}</p>
+      ${p.shades ? `
+      <p class="shade-line">Shade: <span id="shade-${i}">${p.shades[0].n}</span></p>
+      <div class="swatches" role="group" aria-label="Choose a shade">
+        ${p.shades.map((s, j) => `<button class="swatch" data-p="${i}" data-s="${j}" aria-label="${s.n}" aria-pressed="${j === 0}" style="background:${s.c}"></button>`).join('')}
+      </div>` : ''}
+    </article>
+  </section>`).join('');
+
+/* ---------- 3. THREE.JS SCENE ---------- */
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
+camera.position.set(0, 1.4, 11.5);
+camera.lookAt(0, 0, 0);
+
+/* Studio lighting: a small "photo studio" of soft light panels, baked into reflections.
+   This is what makes metal, glass and gloss look realistic. */
+(function buildStudio() {
+  const studio = new THREE.Scene();
+  studio.add(new THREE.Mesh(new THREE.BoxGeometry(24, 24, 24), new THREE.MeshBasicMaterial({ color:0xc9bfc5, side:THREE.BackSide })));
+  const panel = (w, h, x, y, z, power) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color:new THREE.Color(1, 1, 1).multiplyScalar(power), side:THREE.DoubleSide }));
+    m.position.set(x, y, z); m.lookAt(0, 0, 0); studio.add(m);
+  };
+  panel(10, 10, 0, 11, 2, 5);      // top softbox
+  panel(5, 9, -9, 3, 4, 6);        // left strip
+  panel(5, 9, 9, 3, 2, 3.5);       // right strip
+  panel(8, 4, 0, 1, 11, 2.5);      // front fill
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(studio, 0.03).texture;
+})();
+const key = new THREE.DirectionalLight(0xffffff, 0.6); key.position.set(3, 6, 6); scene.add(key);
+
+/* Fresh materials per product (so each one can fade on its own). */
+const gold  = () => new THREE.MeshPhysicalMaterial({ color:0xd8b06a, metalness:1, roughness:0.22 });
+const black = () => new THREE.MeshPhysicalMaterial({ color:0x1a1213, metalness:0.2, roughness:0.35, clearcoat:0.6, clearcoatRoughness:0.3 });
+const tintMat = (hex, o = {}) => new THREE.MeshPhysicalMaterial(Object.assign({ color:hex, roughness:0.4, metalness:0 }, o));
+const cyl = (rt, rb, h, mat, y) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, 64), mat); m.position.y = y; return m; };
+
+/* Center a group and scale it to a given height. */
+function fit(group, height) {
+  const box = new THREE.Box3().setFromObject(group), size = new THREE.Vector3(), center = new THREE.Vector3();
+  box.getSize(size); box.getCenter(center);
+  group.position.sub(center);
+  const w = new THREE.Group(); w.add(group); w.scale.setScalar(height / size.y);
+  return w;
+}
+const glassMat = () => new THREE.MeshPhysicalMaterial({ color:0xffffff, roughness:0.05, metalness:0, transparent:true, opacity:0.18, depthWrite:false });
+
+/* Simple generic stand-ins, not copies of real packaging. Each returns { group, tint }.
+   "tint" is the material the shade picker recolors. */
+const BUILD = {
+  mascara(hex) {
+    const tint = tintMat(hex, { roughness:0.25, clearcoat:1, clearcoatRoughness:0.1 }), g = new THREE.Group();
+    g.add(cyl(0.35, 0.35, 2.2, tint, 0), cyl(0.37, 0.37, 0.08, gold(), 1.14), cyl(0.4, 0.4, 1.2, black(), 1.78));
+    return { group:g, tint };
+  },
+  liquidLip(hex) {                      // slim tube with the applicator wand standing up
+    const tint = tintMat(hex, { roughness:0.3, clearcoat:0.8, clearcoatRoughness:0.15 }), g = new THREE.Group();
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.2, 48, 24), tint); tip.scale.set(1, 1.7, 0.4); tip.position.y = 2.2;
+    g.add(cyl(0.3, 0.26, 1.6, black(), 0), cyl(0.31, 0.31, 0.06, gold(), 0.83), cyl(0.2, 0.3, 0.3, black(), 0.95),
+          cyl(0.05, 0.05, 1.0, black(), 1.6), tip);
+    return { group:g, tint };
+  },
+  foundation(hex) {                     // glass bottle with a pump
+    const liquid = tintMat(hex, { roughness:0.25 }), g = new THREE.Group();
+    const head = cyl(0.1, 0.1, 0.6, black(), 1.95); head.rotation.z = Math.PI / 2; head.position.x = 0.18;
+    g.add(cyl(0.62, 0.62, 1.9, liquid, 0), cyl(0.68, 0.68, 2.0, glassMat(), 0), cyl(0.3, 0.68, 0.3, glassMat(), 1.15),
+          cyl(0.24, 0.24, 0.3, black(), 1.45), cyl(0.07, 0.07, 0.4, black(), 1.75), head);
+    return { group:g, tint:liquid };
+  },
+  concealer(hex) {                      // tube with a sponge applicator
+    const sponge = tintMat(hex, { roughness:1 }), g = new THREE.Group();
+    const white = new THREE.MeshPhysicalMaterial({ color:0xf4efea, roughness:0.3, clearcoat:0.7 });
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.28, 48, 24), sponge); tip.scale.set(0.9, 1.5, 0.45); tip.position.y = 1.65;
+    g.add(cyl(0.32, 0.32, 1.7, white, 0), cyl(0.34, 0.34, 0.08, gold(), 0.88), cyl(0.2, 0.32, 0.25, black(), 1.0),
+          cyl(0.07, 0.07, 0.5, black(), 1.3), tip);
+    return { group:g, tint:sponge };
+  },
+  lineup() {                            // the four products side by side for the intro
+    const g = new THREE.Group();
+    const items = [[BUILD.mascara('#1b1417'), 2.9], [BUILD.liquidLip('#b3243b'), 2.7], [BUILD.foundation('#e0b48f'), 2.4], [BUILD.concealer('#e6bd9c'), 2.6]];
+    items.forEach(([it, h], k) => { const w = fit(it.group, h); w.position.x = (k - 1.5) * 1.1; g.add(w); });
+    return { group:g, tint:new THREE.MeshBasicMaterial() };
+  }
+};
+
+/* Soft contact shadow under each product. */
+function shadowTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d'), gr = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  gr.addColorStop(0, 'rgba(70,35,50,.5)'); gr.addColorStop(1, 'rgba(70,35,50,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+  return new THREE.CanvasTexture(c);
+}
+const shadowTex = shadowTexture();
+
+/* Scale and center every model so they all share the same height. */
+function normalize(group, height = 3.2) {
+  const box = new THREE.Box3().setFromObject(group), size = new THREE.Vector3(), center = new THREE.Vector3();
+  box.getSize(size); box.getCenter(center);
+  group.position.sub(center);
+  const wrap = new THREE.Group(); wrap.add(group); wrap.scale.setScalar(height / size.y);
+  const shadowSize = Math.max(3.4, size.x * height / size.y * 1.3);
+  const outer = new THREE.Group(); outer.add(wrap);
+  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(shadowSize, shadowSize),
+    new THREE.MeshBasicMaterial({ map:shadowTex, transparent:true, depthWrite:false }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = -height / 2 - 0.02;
+  outer.add(shadow);
+  return outer;
+}
+
+const stage = new THREE.Group(); scene.add(stage);
+const START_ANGLE = -0.5;
+const models = PRODUCTS.map(p => {
+  const { group, tint } = BUILD[p.type](p.shades ? p.shades[0].c : '#ffffff');
+  const obj = normalize(group);
+  const mats = new Set();
+  obj.traverse(o => { if (o.isMesh) { mats.add(o.material); o.material.userData.base = o.material.opacity; } });
+  obj.rotation.y = START_ANGLE;
+  stage.add(obj);
+  return { obj, tint, mats:[...mats], target:new THREE.Color(p.shades ? p.shades[0].c : '#ffffff'), rot:START_ANGLE, targetRot:START_ANGLE };
+});
+
+/* Fade a product in and out (a = 0 to 1). */
+function setAlpha(m, a) {
+  m.obj.visible = a > 0.01;
+  m.mats.forEach(mat => { mat.opacity = mat.userData.base * a; mat.transparent = a < 0.999 || mat.userData.base < 1; });
+}
+
+/* Shade picker: recolors the 3D product. */
+document.getElementById('products').addEventListener('click', e => {
+  const b = e.target.closest('.swatch'); if (!b) return;
+  const i = +b.dataset.p, s = PRODUCTS[i].shades[+b.dataset.s];
+  models[i].target.set(s.c);
+  b.parentElement.querySelectorAll('.swatch').forEach(x => x.setAttribute('aria-pressed', x === b));
+  document.getElementById('shade-' + i).textContent = s.n;
+});
+
+/* ---------- 4. DRAG TO TURN THE PRODUCT ---------- */
+let dragging = false, lastX = 0;
+canvas.addEventListener('pointerdown', e => { dragging = true; lastX = e.clientX; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', e => {
+  if (!dragging) return;
+  models[Math.round(idx)].targetRot += (e.clientX - lastX) * 0.012;
+  lastX = e.clientX;
+});
+['pointerup', 'pointercancel'].forEach(ev => canvas.addEventListener(ev, () => { dragging = false; }));
+
+/* ---------- 5. RESPONSIVE LAYOUT ---------- */
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  if (w / h > 1.1) { stage.position.set(2.7, 0, 0); stage.scale.setScalar(1); }       // desktop: product on the right
+  else             { stage.position.set(0, 1.7, 0); stage.scale.setScalar(0.7); }     // phone: product above the card
+}
+addEventListener('resize', resize); resize();
+
+/* ---------- 6. SCROLL: calm cross-fade between products ---------- */
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const root = document.documentElement;
+const cA0 = new THREE.Color(), cA1 = new THREE.Color(), cB0 = new THREE.Color(), cB1 = new THREE.Color();
+let idx = 0;
+
+(function loop() {
+  const want = Math.min(N - 1, Math.max(0, scrollY / innerHeight));
+  idx += (want - idx) * (reduce ? 1 : 0.12);
+
+  models.forEach((m, i) => {
+    setAlpha(m, Math.max(0, Math.min(1, 1 - Math.abs(i - idx) * 2.2)));
+    m.rot += (m.targetRot - m.rot) * 0.15;
+    m.obj.rotation.y = m.rot;
+    m.tint.color.lerp(m.target, 0.15);
+  });
+
+  const i0 = Math.floor(idx), i1 = Math.min(N - 1, i0 + 1), t = idx - i0;
+  cA0.set(PRODUCTS[i0].bg1); cA1.set(PRODUCTS[i1].bg1); cB0.set(PRODUCTS[i0].bg2); cB1.set(PRODUCTS[i1].bg2);
+  root.style.setProperty('--a', '#' + cA0.lerp(cA1, t).getHexString());
+  root.style.setProperty('--b', '#' + cB0.lerp(cB1, t).getHexString());
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
